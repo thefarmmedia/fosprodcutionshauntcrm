@@ -1,18 +1,29 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Skull } from 'lucide-react'
 import { useStore } from '@/lib/store'
+import { getSupabase } from '@/lib/adapters/supabase'
 import { sortedLocations } from '@/lib/queries'
-import { DAYS, type Day } from '@/lib/types'
+import { DAYS, type Day, type Location } from '@/lib/types'
 import { nowISO, uid } from '@/lib/utils'
 import { Field } from '@/components/ui'
 
 const POSITIONS = ['Scare actor', 'Makeup artist', 'Wardrobe', 'Build crew', 'Admissions / box office', 'Concessions', 'Parking', 'Security']
 
 export default function ApplyPage() {
-  const { db, mode, insert, ready } = useStore()
-  const locs = sortedLocations(db)
+  const { db, mode, insert } = useStore()
+  // Applicants aren't signed in, so in live mode the locations come from a public read.
+  const [liveLocs, setLiveLocs] = useState<Location[] | null>(null)
+  useEffect(() => {
+    const sb = getSupabase()
+    if (!sb) return
+    sb.from('locations')
+      .select('*')
+      .order('sort')
+      .then(({ data }) => setLiveLocs((data as Location[]) ?? []))
+  }, [])
+  const locs = mode === 'live' ? liveLocs ?? [] : sortedLocations(db)
   const [loc, setLoc] = useState('')
   const [days, setDays] = useState<Day[]>([])
   const [state, setState] = useState<'idle' | 'sending' | 'done'>('idle')
@@ -136,7 +147,7 @@ export default function ApplyPage() {
           <div>
             <span className="label text-center sm:text-left">Which haunt?</span>
             <div className="grid grid-cols-2 gap-2">
-              {(ready ? locs : []).map((l) => (
+              {locs.map((l) => (
                 <button
                   type="button"
                   key={l.id}

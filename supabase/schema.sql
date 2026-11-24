@@ -148,6 +148,10 @@ begin
   end loop;
 end $$;
 
+-- The public /apply form lists the locations to applicants who aren't signed in.
+drop policy if exists "public can read locations" on locations;
+create policy "public can read locations" on locations for select to anon using (true);
+
 -- Realtime so check-ins and changes show up instantly at both locations.
 do $$
 declare t text;
